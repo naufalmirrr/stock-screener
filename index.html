@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IHSG Fundamental Stock Screener</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased p-4 md:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-800 gap-4">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-emerald-400 flex items-center gap-2">
+          <i class="ph ph-trend-up"></i> Personal Stock Screener
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">Saring emiten IHSG berdasarkan valuasi, kesehatan neraca, dan profitabilitas modal.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="loadDemoData()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition border border-slate-700 flex items-center gap-1.5">
+          <i class="ph ph-database"></i> Muat Data Demo
+        </button>
+        <button onclick="exportToCSV()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold rounded-lg transition border border-slate-700 flex items-center gap-1.5">
+          <i class="ph ph-download-simple"></i> Ekspor CSV
+        </button>
+      </div>
+    </header>
+
+    <!-- API Configuration Card -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i class="ph ph-key text-amber-400"></i> Konfigurasi REST API Key
+        </h2>
+        <span class="text-xs text-slate-500">Tersimpan aman di LocalStorage perangkat Anda</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div class="md:col-span-5">
+          <input type="password" id="apiKeyInput" placeholder="Masukkan API Key (sk_live_...)" 
+            class="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div class="md:col-span-5">
+          <input type="text" id="endpointInput" placeholder="API Endpoint URL (Opsional/Sesuai Provider Anda)" 
+            class="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div class="md:col-span-2">
+          <button onclick="saveApiKey()" class="w-full h-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition">
+            Simpan Kunci
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Parameters Grid -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-5">
+      <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+        <i class="ph ph-sliders text-emerald-400"></i> Parameter Saringan Fundamental
+      </h2>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Max PER -->
+        <div class="bg-slate-950/60 p-3.5 rounded-lg border border-slate-800 space-y-2">
+          <div class="flex justify-between text-xs text-slate-400 font-medium">
+            <span>PER Maksimal</span>
+            <span id="peVal" class="text-emerald-400 font-bold">12x</span>
+          </div>
+          <input type="range" id="peInput" min="2" max="30" step="1" value="12" oninput="updateFilters()"
+            class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+        </div>
+
+        <!-- Max PBV -->
+        <div class="bg-slate-950/60 p-3.5 rounded-lg border border-slate-800 space-y-2">
+          <div class="flex justify-between text-xs text-slate-400 font-medium">
+            <span>PBV Maksimal</span>
+            <span id="pbvVal" class="text-emerald-400 font-bold">1.2x</span>
+          </div>
+          <input type="range" id="pbvInput" min="0.2" max="5.0" step="0.1" value="1.2" oninput="updateFilters()"
+            class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+        </div>
+
+        <!-- Min ROE -->
+        <div class="bg-slate-950/60 p-3.5 rounded-lg border border-slate-800 space-y-2">
+          <div class="flex justify-between text-xs text-slate-400 font-medium">
+            <span>ROE Minimal</span>
+            <span id="roeVal" class="text-emerald-400 font-bold">10%</span>
+          </div>
+          <input type="range" id="roeInput" min="0" max="35" step="1" value="10" oninput="updateFilters()"
+            class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+        </div>
+
+        <!-- Max DER -->
+        <div class="bg-slate-950/60 p-3.5 rounded-lg border border-slate-800 space-y-2">
+          <div class="flex justify-between text-xs text-slate-400 font-medium">
+            <span>DER (Utang) Maksimal</span>
+            <span id="derVal" class="text-emerald-400 font-bold">1.2x</span>
+          </div>
+          <input type="range" id="derInput" min="0.1" max="4.0" step="0.1" value="1.2" oninput="updateFilters()"
+            class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+        </div>
+
+      </div>
+
+      <!-- Quick Search & Actions -->
+      <div class="flex flex-col sm:flex-row gap-3 pt-2">
+        <div class="relative flex-1">
+          <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-slate-500"></i>
+          <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Cari kode saham atau nama emiten (contoh: ELSA, AUTO, MBSS)..." 
+            class="w-full pl-9 pr-4 py-2 text-sm bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+        <button onclick="fetchFromLiveAPI()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-2">
+          <i class="ph ph-arrow-clockwise"></i> Ambil Data API
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+        <h2 class="text-sm font-semibold text-slate-300">
+          Hasil Saringan: <span id="recordCount" class="text-emerald-400 font-bold">0</span> Emiten Lolos
+        </h2>
+        <span id="statusBadge" class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-400">Siap</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-950/80 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-3.5 px-4 cursor-pointer hover:text-emerald-400" onclick="sortTable('ticker')">Kode <i class="ph ph-arrows-down-up"></i></th>
+              <th class="py-3.5 px-4">Nama Perusahaan</th>
+              <th class="py-3.5 px-4 text-right cursor-pointer hover:text-emerald-400" onclick="sortTable('price')">Harga <i class="ph ph-arrows-down-up"></i></th>
+              <th class="py-3.5 px-4 text-right cursor-pointer hover:text-emerald-400" onclick="sortTable('pe')">PER <i class="ph ph-arrows-down-up"></i></th>
+              <th class="py-3.5 px-4 text-right cursor-pointer hover:text-emerald-400" onclick="sortTable('pbv')">PBV <i class="ph ph-arrows-down-up"></i></th>
+              <th class="py-3.5 px-4 text-right cursor-pointer hover:text-emerald-400" onclick="sortTable('roe')">ROE (%) <i class="ph ph-arrows-down-up"></i></th>
+              <th class="py-3.5 px-4 text-right cursor-pointer hover:text-emerald-400" onclick="sortTable('der')">DER <i class="ph ph-arrows-down-up"></i></th>
+              <th class="py-3.5 px-4 text-right">Yield Div.</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-800/60 font-mono text-xs">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Inisialisasi Data Demo Dasar IHSG
+    const defaultData = [
+      { ticker: "ELSA", name: "Elnusa Tbk", price: 470, pe: 5.6, pbv: 0.72, roe: 13.8, der: 0.65, dividendYield: 7.2 },
+      { ticker: "AUTO", name: "Astra Otoparts Tbk", price: 2150, pe: 5.2, pbv: 0.68, roe: 14.1, der: 0.38, dividendYield: 6.8 },
+      { ticker: "MBSS", name: "Mitrabahtera Segara Sejati Tbk", price: 1120, pe: 7.4, pbv: 0.62, roe: 9.8, der: 0.15, dividendYield: 4.5 },
+      { ticker: "TPMA", name: "Trans Power Marine Tbk", price: 740, pe: 7.8, pbv: 1.05, roe: 15.2, der: 0.42, dividendYield: 8.5 },
+      { ticker: "PTBA", name: "Bukit Asam Tbk", price: 2650, pe: 6.9, pbv: 1.45, roe: 21.0, der: 0.78, dividendYield: 12.4 },
+      { ticker: "ITMG", name: "Indo Tambangraya Megah Tbk", price: 26100, pe: 5.8, pbv: 1.15, roe: 20.4, der: 0.28, dividendYield: 14.2 },
+      { ticker: "BBCA", name: "Bank Central Asia Tbk", price: 10250, pe: 22.5, pbv: 4.80, roe: 21.5, der: 4.50, dividendYield: 2.5 },
+      { ticker: "TCPI", name: "Transcoal Pacific Tbk", price: 2260, pe: 96.0, pbv: 4.60, roe: 4.8, der: 0.85, dividendYield: 0.0 },
+      { ticker: "PIPA", name: "Multi Makmur Lemindo Tbk", price: 199, pe: 65.0, pbv: 3.80, roe: 3.2, der: 0.45, dividendYield: 0.0 }
+    ];
+
+    let rawStocks = [];
+    let filteredStocks = [];
+    let currentSortCol = 'pbv';
+    let sortAsc = true;
+
+    // Load LocalStorage on Startup
+    window.onload = () => {
+      const savedKey = localStorage.getItem("screener_api_key");
+      const savedUrl = localStorage.getItem("screener_api_url");
+      if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
+      if (savedUrl) document.getElementById("endpointInput").value = savedUrl;
+      loadDemoData();
+    };
+
+    function saveApiKey() {
+      const key = document.getElementById("apiKeyInput").value.trim();
+      const url = document.getElementById("endpointInput").value.trim();
+      localStorage.setItem("screener_api_key", key);
+      localStorage.setItem("screener_api_url", url);
+      alert("Pengaturan API berhasil disimpan secara lokal!");
+    }
+
+    function loadDemoData() {
+      rawStocks = [...defaultData];
+      document.getElementById("statusBadge").innerText = "Data Demo IHSG";
+      document.getElementById("statusBadge").className = "text-xs px-2.5 py-1 rounded bg-blue-900/60 text-blue-300";
+      applyFilters();
+    }
+
+    function updateFilters() {
+      document.getElementById("peVal").innerText = document.getElementById("peInput").value + "x";
+      document.getElementById("pbvVal").innerText = document.getElementById("pbvInput").value + "x";
+      document.getElementById("roeVal").innerText = document.getElementById("roeInput").value + "%";
+      document.getElementById("derVal").innerText = document.getElementById("derInput").value + "x";
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const maxPe = parseFloat(document.getElementById("peInput").value);
+      const maxPbv = parseFloat(document.getElementById("pbvInput").value);
+      const minRoe = parseFloat(document.getElementById("roeInput").value);
+      const maxDer = parseFloat(document.getElementById("derInput").value);
+      const query = document.getElementById("searchInput").value.toUpperCase().trim();
+
+      filteredStocks = rawStocks.filter(stock => {
+        const matchesQuery = stock.ticker.includes(query) || stock.name.toUpperCase().includes(query);
+        const matchesPe = stock.pe > 0 && stock.pe <= maxPe;
+        const matchesPbv = stock.pbv > 0 && stock.pbv <= maxPbv;
+        const matchesRoe = stock.roe >= minRoe;
+        const matchesDer = stock.der <= maxDer;
+        return matchesQuery && matchesPe && matchesPbv && matchesRoe && matchesDer;
+      });
+
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("tableBody");
+      document.getElementById("recordCount").innerText = filteredStocks.length;
+      tbody.innerHTML = "";
+
+      if (filteredStocks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500 font-sans">Tidak ada saham yang memenuhi kriteria filter.</td></tr>`;
+        return;
+      }
+
+      filteredStocks.forEach(s => {
+        const row = `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3 px-4 font-bold text-emerald-400 font-sans">${s.ticker}</td>
+            <td class="py-3 px-4 text-slate-300 font-sans truncate max-w-[200px]">${s.name}</td>
+            <td class="py-3 px-4 text-right">Rp ${s.price.toLocaleString('id-ID')}</td>
+            <td class="py-3 px-4 text-right ${s.pe <= 10 ? 'text-emerald-400 font-bold' : ''}">${s.pe.toFixed(1)}x</td>
+            <td class="py-3 px-4 text-right ${s.pbv <= 1.0 ? 'text-emerald-400 font-bold' : ''}">${s.pbv.toFixed(2)}x</td>
+            <td class="py-3 px-4 text-right ${s.roe >= 12 ? 'text-emerald-400 font-bold' : ''}">${s.roe.toFixed(1)}%</td>
+            <td class="py-3 px-4 text-right">${s.der.toFixed(2)}x</td>
+            <td class="py-3 px-4 text-right text-amber-400 font-semibold">${s.dividendYield ? s.dividendYield.toFixed(1) + '%' : '-'}</td>
+          </tr>
+        `;
+        tbody.insertAdjacentHTML("beforeend", row);
+      });
+    }
+
+    function sortTable(col) {
+      if (currentSortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        currentSortCol = col;
+        sortAsc = true;
+      }
+      filteredStocks.sort((a, b) => {
+        let v1 = a[col];
+        let v2 = b[col];
+        return sortAsc ? (v1 > v2 ? 1 : -1) : (v1 < v2 ? 1 : -1);
+      });
+      renderTable();
+    }
+
+    // Pemanggilan Live API
+    async function fetchFromLiveAPI() {
+      const apiKey = document.getElementById("apiKeyInput").value.trim();
+      const endpoint = document.getElementById("endpointInput").value.trim();
+
+      if (!apiKey) {
+        alert("Harap masukkan API Key terlebih dahulu.");
+        return;
+      }
+
+      document.getElementById("statusBadge").innerText = "Menarik Data...";
+      document.getElementById("statusBadge").className = "text-xs px-2.5 py-1 rounded bg-amber-900/60 text-amber-300";
+
+      try {
+        // Contoh penarikan ke REST API (sesuaikan dengan format response endpoint Anda)
+        const targetUrl = endpoint || `https://api.allorigins.win/raw?url=${encodeURIComponent('https://financialmodelingprep.com/api/v3/stock-screener?limit=100&apikey=' + apiKey)}`;
+        const res = await fetch(targetUrl);
+        const data = await res.json();
+
+        // Normalisasi format response ke schema lokal
+        rawStocks = data.map(item => ({
+          ticker: item.symbol || item.ticker,
+          name: item.companyName || item.name || item.symbol,
+          price: item.price || 0,
+          pe: item.pe || 0,
+          pbv: item.priceToBookValue || item.pbv || 0,
+          roe: (item.roe ? item.roe * 100 : (item.returnOnEquity || 0)),
+          der: item.debtToEquity || item.der || 0,
+          dividendYield: item.dividendYieldPercentage || item.dividendYield || 0
+        }));
+
+        document.getElementById("statusBadge").innerText = "Terkoneksi API";
+        document.getElementById("statusBadge").className = "text-xs px-2.5 py-1 rounded bg-emerald-900/60 text-emerald-300";
+        applyFilters();
+      } catch (err) {
+        alert("Gagal menarik data dari endpoint API: " + err.message);
+        document.getElementById("statusBadge").innerText = "Error API";
+        document.getElementById("statusBadge").className = "text-xs px-2.5 py-1 rounded bg-rose-900/60 text-rose-300";
+      }
+    }
+
+    function exportToCSV() {
+      if (filteredStocks.length === 0) return alert("Tidak ada data untuk diekspor.");
+      let csv = "Kode,Perusahaan,Harga,PER,PBV,ROE(%),DER,Yield(%)\n";
+      filteredStocks.forEach(s => {
+        csv += `"${s.ticker}","${s.name}",${s.price},${s.pe},${s.pbv},${s.roe},${s.der},${s.dividendYield}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `screener_saham_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+    }
+  </script>
+</body>
+</html>
